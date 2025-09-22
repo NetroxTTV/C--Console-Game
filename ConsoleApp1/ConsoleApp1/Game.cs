@@ -1,16 +1,28 @@
-﻿namespace Game
+﻿using System;
+using NAudio.Wave;
+using System.Globalization;
+
+namespace Game
 {
     public class Game
     {
-        private Maze maze;
-        private Player player;
-        private bool running;
+        private Maze _maze;
+        private Player _player;
+        private bool _running;
+        private string _music = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            @"GitHub\C--Console-Game\ConsoleApp1\ConsoleApp1\music\cat.mp3"
+        );
+
+
+        private static IWavePlayer? waveOut;
+        private static AudioFileReader? audioFile;
 
         public Game()
         {
-            maze = new Maze();
-            player = new Player(1, 1);
-            running = true;
+            _maze = new Maze();
+            _player = new Player(1, 1);
+            _running = true;
         }
 
         public void Start()
@@ -18,6 +30,32 @@
             ShowInstructions();
             Play();
         }
+
+        // FROM NAudio Audio
+        private void PlaySound()
+        {
+            try
+            {
+                waveOut = new WaveOutEvent();
+                audioFile = new AudioFileReader(_music);
+                waveOut.Init(audioFile);
+                waveOut.Play();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error playing music: {ex.Message}");
+            }
+        }
+
+        private void StopSound()
+        {
+            waveOut?.Stop();
+            audioFile?.Dispose();
+            waveOut?.Dispose();
+            audioFile = null;
+            waveOut = null;
+        }
+        // END AUDIO
 
         private void ShowInstructions()
         {
@@ -30,9 +68,10 @@
 
         private void Play()
         {
-            while (running)
+            PlaySound();
+            while (_running)
             {
-                maze.Draw(player);
+                _maze.Draw(_player);
 
                 if (CheckWin())
                 {
@@ -42,12 +81,14 @@
 
                 HandleInput();
             }
+
+            StopSound();
         }
 
         private void HandleInput()
         {
             ConsoleKeyInfo key = Console.ReadKey(true);
-            Position newPos = new Position(player.Position.X, player.Position.Y);
+            Position newPos = new Position(_player.Position.X, _player.Position.Y);
 
             switch (key.Key)
             {
@@ -55,24 +96,24 @@
                 case ConsoleKey.S: newPos.Y++; break;
                 case ConsoleKey.Q: newPos.X--; break;
                 case ConsoleKey.D: newPos.X++; break;
-                case ConsoleKey.Escape: running = false; return;
+                case ConsoleKey.Escape: _running = false; return;
             }
 
-            if (maze.CanMove(newPos))
+            if (_maze.CanMove(newPos))
             {
-                player.Position = newPos;
+                _player.Position = newPos;
 
-                if (maze.HasItem(newPos))
+                if (_maze.HasItem(newPos))
                 {
-                    maze.CollectItem(newPos);
-                    player.AddScore();
+                    _maze.CollectItem(newPos);
+                    _player.AddScore();
                 }
             }
         }
 
         private bool CheckWin()
         {
-            return maze.IsExit(player.Position) && maze.AllItemsCollected();
+            return _maze.IsExit(_player.Position) && _maze.AllItemsCollected();
         }
 
         private void ShowWin()
@@ -81,7 +122,7 @@
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("VICTORY!");
             Console.ResetColor();
-            Console.WriteLine($"Final Score: {player.Score} points");
+            Console.WriteLine($"Final Score: {_player.Score} points");
             Console.WriteLine("Press any key to quit...");
             Console.ReadKey();
         }
